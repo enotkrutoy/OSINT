@@ -100,6 +100,27 @@ class AgentRunner {
     userInput: string,
     attachment?: Attachment
   ): AsyncGenerator<AgentResponse, void, unknown> {
+    
+    // Explicit Check for API Key
+    if (!process.env.API_KEY || process.env.API_KEY === "undefined" || process.env.API_KEY.length < 10) {
+        yield {
+            text: `### ⛔ CRITICAL CONFIGURATION ERROR
+            
+**API Key Not Found.**
+
+Приложение не может подключиться к Google Gemini API. Это обычно происходит по следующим причинам:
+
+1.  **Vercel Deployment:** Вы забыли добавить переменную \`API_KEY\` в настройках проекта.
+    *   Перейдите в Vercel Dashboard -> Settings -> Environment Variables.
+    *   Добавьте ключ \`API_KEY\` со значением вашего ключа (начинается с \`AIza...\`).
+    *   **Важно:** Сделайте **Redeploy** (Deployments -> Redeploy), чтобы изменения вступили в силу.
+2.  **Local Development:** В файле \`.env\` отсутствует \`API_KEY\`.
+
+Пожалуйста, исправьте конфигурацию и обновите страницу.`
+        };
+        return;
+    }
+
     const chat = this.getOrCreateChat(sessionId);
     
     try {
