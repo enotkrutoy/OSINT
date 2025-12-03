@@ -5,16 +5,19 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
-  const env = loadEnv(mode, '.', '');
+  // Using process.cwd() is safer for Vercel build environments.
+  const env = loadEnv(mode, process.cwd(), '');
   
-  // CRITICAL FIX: Vercel exposes env vars in process.env during build.
-  // We must check both the loaded .env file (env) and the system process.env.
-  const apiKey = env.API_KEY || process.env.API_KEY;
+  // Priority: 
+  // 1. Vercel System Env (process.env.API_KEY)
+  // 2. Loaded .env file (env.API_KEY)
+  const apiKey = process.env.API_KEY || env.API_KEY;
 
   return {
     plugins: [react()],
     define: {
       // Polyfill process.env.API_KEY for the Google GenAI SDK
+      // Ensure it's always a string, even if undefined
       'process.env.API_KEY': JSON.stringify(apiKey || '')
     },
     build: {

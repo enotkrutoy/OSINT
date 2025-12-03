@@ -12,16 +12,23 @@ import { AgentResponse, GroundingChunk, Attachment } from "../types";
 const MODEL_NAME = "gemini-2.5-flash";
 
 class AgentRunner {
-  private client: GoogleGenAI;
+  private client: GoogleGenAI | null = null;
   private chatSessions: Map<string, Chat> = new Map();
 
   constructor() {
-    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Lazy initialization handled in getClient()
+  }
+
+  private getClient(): GoogleGenAI {
+    if (!this.client) {
+      this.client = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+    }
+    return this.client;
   }
 
   private getOrCreateChat(sessionId: string): Chat {
     if (!this.chatSessions.has(sessionId)) {
-      const chat = this.client.chats.create({
+      const chat = this.getClient().chats.create({
         model: MODEL_NAME,
         config: {
           thinkingConfig: { thinkingBudget: 4096 }, 
@@ -102,21 +109,25 @@ class AgentRunner {
   ): AsyncGenerator<AgentResponse, void, unknown> {
     
     // Explicit Check for API Key
-    if (!process.env.API_KEY || process.env.API_KEY === "undefined" || process.env.API_KEY.length < 10) {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey || apiKey === "undefined" || apiKey.length < 10 || !apiKey.startsWith("AIza")) {
         yield {
             text: `### ⛔ CRITICAL CONFIGURATION ERROR
             
-**API Key Not Found.**
+**API Key Invalid or Missing.**
 
-Приложение не может подключиться к Google Gemini API. Это обычно происходит по следующим причинам:
+Приложение не видит корректный ключ Google Gemini API.
 
-1.  **Vercel Deployment:** Вы забыли добавить переменную \`API_KEY\` в настройках проекта.
-    *   Перейдите в Vercel Dashboard -> Settings -> Environment Variables.
-    *   Добавьте ключ \`API_KEY\` со значением вашего ключа (начинается с \`AIza...\`).
-    *   **Важно:** Сделайте **Redeploy** (Deployments -> Redeploy), чтобы изменения вступили в силу.
-2.  **Local Development:** В файле \`.env\` отсутствует \`API_KEY\`.
+**ЧТО ДЕЛАТЬ (VERCEL):**
 
-Пожалуйста, исправьте конфигурацию и обновите страницу.`
+1.  Откройте **Vercel Dashboard** > Ваш Проект > **Settings** > **Environment Variables**.
+2.  Убедитесь, что добавлен ключ:
+    *   Key: \`API_KEY\`
+    *   Value: \`AIza...\` (Ваш полный ключ)
+3.  **ОБЯЗАТЕЛЬНО:** Перейдите в вкладку **Deployments**, нажмите на три точки рядом с последним деплоем и выберите **Redeploy**.
+    *   *Переменные окружения применяются ТОЛЬКО при новой сборке.*
+
+**Текущий статус ключа:** ${apiKey ? 'Присутствует (Некорректный формат)' : 'Отсутствует'}`
         };
         return;
     }
