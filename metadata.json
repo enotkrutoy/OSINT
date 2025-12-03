@@ -1,0 +1,5 @@
+{
+  "name": "Red Team OSINT Orchestrator 2",
+  "description": "Multi-agent system for technical research and document discovery",
+  "requestFramePermissions": []
+}
